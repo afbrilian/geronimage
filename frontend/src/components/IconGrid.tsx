@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import JSZip from 'jszip'
 import { Card } from './ui/Card'
 import { Button } from './ui/Button'
-import { Loading } from './ui/Loading'
+import { Skeleton } from './ui/Skeleton'
 import { downloadImageAs512x512, resizeImageTo512x512 } from '@/utils/imageUtils'
 import { useToastStore } from '@/stores/toastStore'
 
@@ -88,8 +88,9 @@ export function IconGrid({ images, loading = false }: IconGridProps) {
       <div className="grid grid-cols-2 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i} className="aspect-square p-0 overflow-hidden">
-            <div className="w-full h-full flex items-center justify-center">
-              <Loading />
+            <div className="w-full h-full p-4 flex flex-col items-center justify-center gap-3">
+              <Skeleton className="w-3/4 h-3/4" variant="square" />
+              <Skeleton className="w-1/2 h-4" variant="text" />
             </div>
           </Card>
         ))}

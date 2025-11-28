@@ -5,16 +5,12 @@ A production-grade web application that generates 4 consistent style icons from 
 ## Project Status
 
 ### ✅ Phase 1: Backend Foundation - COMPLETED
-- Backend API fully functional
-- Queue system implemented
-- Caching system implemented
-- Rate limiting implemented
-- Server running on http://localhost:3001
+### ✅ Phase 2: Backend Testing - COMPLETED
+### ✅ Phase 3: Frontend Foundation - COMPLETED
+### ✅ Phase 4: Frontend Integration & Polling - COMPLETED
+### ✅ Phase 5: Polish & Deployment - COMPLETED
 
-### 🔄 Phase 2: Backend Testing - NEXT
-### ⏳ Phase 3: Frontend Foundation - PENDING
-### ⏳ Phase 4: Frontend Integration & Polling - PENDING
-### ⏳ Phase 5: Polish & Deployment - PENDING
+**Status**: Production-ready! All phases complete.
 
 ## Tech Stack
 
@@ -35,7 +31,26 @@ A production-grade web application that generates 4 consistent style icons from 
 
 ## Quick Start
 
-### Backend
+### Prerequisites
+- Node.js 18+ and npm
+- Replicate API token ([Get one here](https://replicate.com/account/api-tokens))
+- OpenAI API key (optional, for better object variations)
+
+### Environment Setup
+
+1. Copy environment template:
+```bash
+cp .env.example .env
+```
+
+2. Edit `.env` and fill in your API tokens:
+```bash
+REPLICATE_API_TOKEN=your_token_here
+OPENAI_API_KEY=your_key_here  # Optional
+```
+
+### Backend Setup
+
 ```bash
 cd backend
 npm install
@@ -44,7 +59,18 @@ npm run dev
 
 Server will start on http://localhost:3001
 
+### Frontend Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend will start on http://localhost:5173
+
 ### Test the API
+
 ```bash
 # Health check
 curl http://localhost:3001/health
@@ -52,83 +78,237 @@ curl http://localhost:3001/health
 # Generate icons
 curl -X POST http://localhost:3001/api/generate \
   -H "Content-Type: application/json" \
-  -d '{"prompt": "toys", "styleId": 1}'
+  -d '{"prompt": "toys", "styleId": 1, "colors": ["#FF5733"]}'
 
 # Check job status (use jobId from previous response)
-curl http://localhost:3001/api/status/{jobId}
+curl http://localhost:3001/api/status/job_1234567890_abc123
 ```
+
+## Deployment
+
+### Backend (Fly.io)
+
+1. Install Fly CLI: `curl -L https://fly.io/install.sh | sh`
+
+2. Login: `fly auth login`
+
+3. Navigate to backend: `cd backend`
+
+4. Launch app: `fly launch` (follow prompts)
+
+5. Set environment variables:
+```bash
+fly secrets set REPLICATE_API_TOKEN=your_token
+fly secrets set OPENAI_API_KEY=your_key  # Optional
+```
+
+6. Deploy: `fly deploy`
+
+### Frontend (Vercel)
+
+1. Install Vercel CLI: `npm i -g vercel`
+
+2. Navigate to frontend: `cd frontend`
+
+3. Deploy: `vercel`
+
+4. Set environment variable:
+```bash
+vercel env add VITE_API_BASE_URL
+# Enter your backend URL: https://your-backend.fly.dev
+```
+
+5. Redeploy: `vercel --prod`
 
 ## Features
 
-### Current (Phase 1)
-- ✅ 5 style presets (Pastels, Bubbles, Geometric, Watercolor, Flat Design)
-- ✅ Queue system for managing concurrent API calls
-- ✅ Intelligent caching (24-hour TTL)
-- ✅ Rate limiting (100 req/15min general, 20 req/hour for generation)
-- ✅ Async job processing with status polling
-- ✅ Optional brand color palette support
-- ✅ Error handling and validation
+## Troubleshooting
 
-### Coming Soon
-- Unit and integration tests
-- Modern ChatGPT + Airbnb-like UI
-- Real-time job status updates
-- Downloadable PNG/JPG icons
-- Production deployment
+### Backend Issues
+
+**Port already in use:**
+```bash
+# Change PORT in .env or kill process on port 3001
+lsof -ti:3001 | xargs kill
+```
+
+**Replicate API errors:**
+- Verify `REPLICATE_API_TOKEN` is set correctly
+- Check rate limits (6 requests/minute for accounts with <$5 credit)
+- Ensure token has access to `black-forest-labs/flux-schnell` model
+
+**OpenAI API errors:**
+- Optional: If not set, system falls back to hardcoded object lists
+- Verify `OPENAI_API_KEY` is valid if you want AI-generated variations
+
+### Frontend Issues
+
+**API connection errors:**
+- Verify `VITE_API_BASE_URL` points to correct backend URL
+- Check CORS configuration on backend
+- Ensure backend is running
+
+**Build errors:**
+```bash
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### Deployment Issues
+
+**Fly.io deployment:**
+- Ensure `fly.toml` is in backend directory
+- Check environment variables are set: `fly secrets list`
+- View logs: `fly logs`
+
+**Vercel deployment:**
+- Ensure `vercel.json` is in frontend directory
+- Check environment variables in Vercel dashboard
+- Verify build command: `npm run build`
 
 ## API Endpoints
 
 ### POST /api/generate
-Generate 4 icons from a prompt.
+Generate 4 icons from a prompt. Returns a job ID for async processing.
 
 **Request:**
 ```json
 {
   "prompt": "toys",
   "styleId": 1,
-  "colors": ["#FF5733", "#00FF00"]  // optional
+  "colors": ["#FF5733", "#00FF00"]  // optional, up to 3 colors
 }
 ```
 
-**Response:**
+**Response (200 OK):**
 ```json
 {
-  "jobId": "job_xxx",
-  "status": "queued"
+  "jobId": "job_1234567890_abc123",
+  "status": "queued",
+  "message": "Icon generation started. Poll /api/status/:jobId for updates"
 }
 ```
+
+**Response (Cached - 200 OK):**
+```json
+{
+  "images": ["url1", "url2", "url3", "url4"],
+  "cached": true,
+  "message": "Served from cache"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid input (missing prompt, invalid styleId, etc.)
+- `429 Too Many Requests`: Rate limit exceeded
+- `500 Internal Server Error`: Server error
 
 ### GET /api/status/:jobId
-Check generation job status.
+Check generation job status. Poll this endpoint until status is "completed" or "failed".
 
-**Response:**
+**Response (200 OK - Pending):**
 ```json
 {
-  "jobId": "job_xxx",
+  "jobId": "job_1234567890_abc123",
+  "status": "pending",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "message": "Job is queued and waiting to be processed"
+}
+```
+
+**Response (200 OK - Processing):**
+```json
+{
+  "jobId": "job_1234567890_abc123",
+  "status": "processing",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "message": "Icons are being generated..."
+}
+```
+
+**Response (200 OK - Completed):**
+```json
+{
+  "jobId": "job_1234567890_abc123",
   "status": "completed",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "completedAt": "2024-01-01T00:01:00.000Z",
   "images": ["url1", "url2", "url3", "url4"]
 }
 ```
 
+**Response (200 OK - Failed):**
+```json
+{
+  "jobId": "job_1234567890_abc123",
+  "status": "failed",
+  "createdAt": "2024-01-01T00:00:00.000Z",
+  "completedAt": "2024-01-01T00:00:30.000Z",
+  "error": "Error message describing what went wrong"
+}
+```
+
+**Error Responses:**
+- `404 Not Found`: Job ID not found
+- `429 Too Many Requests`: Rate limit exceeded (status polling)
+- `500 Internal Server Error`: Server error
+
 ### GET /health
-Health check with queue stats.
+Health check endpoint with queue statistics.
+
+**Response (200 OK):**
+```json
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "queue": {
+    "total": 5,
+    "pending": 2,
+    "processing": 1,
+    "completed": 1,
+    "failed": 1
+  }
+}
+```
+
+## Rate Limiting
+
+- **General API**: 100 requests per 15 minutes per IP
+- **Generation Endpoint**: 20 requests per hour per IP
+- **Status Endpoint**: 60 requests per minute per IP (for polling)
+
+Rate limit responses include `Retry-After` header indicating when to retry.
 
 ## Style Presets
 
 | ID | Name | Description |
 |----|------|-------------|
-| 1 | Pastels | Soft pastel colors, gentle gradients |
-| 2 | Bubbles | Bubble-like forms, rounded shapes |
-| 3 | Geometric | Clean lines, geometric shapes |
-| 4 | Watercolor | Watercolor painting style |
-| 5 | Flat Design | Flat design, solid colors |
+| 1 | Soft Pastel Outline Icon | Soft pastel hand-drawn icon with thin rounded outline and gentle shading |
+| 2 | Playful Doodle Orbit | Playful doodle icon with uneven outlines, stars and dots, and a circular pastel backdrop |
+| 3 | Storybook Sketch Cloudscape | Colorful storybook-style sketchy illustration with pastel cloud splash and small accents |
+| 4 | Glossy Gradient Icon | Modern glossy gradient vector icon of a single toy-like object with smooth lighting |
+| 5 | Monochrome Badge Silhouette | Strict two-color silhouette icon: one solid circle and one solid object shape, no outlines, no shading, no details |
+
+## Features
+
+- ✅ **4 Different Icons**: Generates 4 unique, themed icons per prompt
+- ✅ **5 Style Presets**: Consistent visual styles across all icons
+- ✅ **512×512 PNG Output**: All downloads are exactly 512×512 pixels
+- ✅ **Optional Color Palette**: Apply up to 3 HEX color codes
+- ✅ **Smart Object Variations**: Uses OpenAI to generate diverse object types
+- ✅ **Queue System**: Manages API rate limits efficiently
+- ✅ **Caching**: 24-hour cache for identical prompts
+- ✅ **Real-time Updates**: Polling-based job status updates
+- ✅ **Download Options**: Individual or ZIP download of all icons
+- ✅ **Modern UI**: ChatGPT + Airbnb-inspired design
 
 ## Documentation
 
 - [Build Progress](build-progress.md) - Overall build plan and progress
+- [Evaluation Report](EVALUATION.md) - Requirements evaluation and status
 - [Backend README](backend/README.md) - Backend API documentation
-- [Phase 1 Summary](PHASE_1_SUMMARY.md) - Phase 1 completion report
-- [Backend Checklist](backend/PHASE_1_CHECKLIST.md) - Detailed verification
+- [Frontend README](frontend/README.md) - Frontend setup and usage
 
 ## Development
 
