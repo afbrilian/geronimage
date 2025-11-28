@@ -18,3 +18,14 @@ export const generationLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: false, // Count successful requests too
 })
+
+// Lenient limiter for status polling endpoint
+// Allows frequent polling (every 2 seconds) without hitting limits
+export const statusLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // Allow up to 60 status checks per minute (1 per second)
+  message: 'Too many status check requests. Please slow down.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true, // Don't count successful requests
+})

@@ -3,7 +3,11 @@ import express from 'express'
 import cors from 'cors'
 import { generateIcons, getJobStatus } from './routes/generate.js'
 import { errorHandler } from './utils/errorHandler.js'
-import { apiLimiter, generationLimiter } from './middleware/rateLimiter.js'
+import {
+  apiLimiter,
+  generationLimiter,
+  statusLimiter,
+} from './middleware/rateLimiter.js'
 import { queue } from './services/queue.js'
 
 const app = express()
@@ -12,8 +16,14 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-// Apply general rate limiting to all API routes
-app.use('/api', apiLimiter)
+// Apply general rate limiting to API routes (excluding status endpoint which has its own limiter)
+app.use('/api', (req, res, next) => {
+  // Skip rate limiting for status endpoint (it has its own limiter)
+  if (req.path.startsWith('/status/')) {
+    return next()
+  }
+  return apiLimiter(req, res, next)
+})
 
 // Health check endpoint
 app.get('/health', (_req, res) => {
@@ -27,7 +37,7 @@ app.get('/health', (_req, res) => {
 
 // API Routes
 app.post('/api/generate', generationLimiter, generateIcons)
-app.get('/api/status/:jobId', getJobStatus)
+app.get('/api/status/:jobId', statusLimiter, getJobStatus)
 
 // Error handling middleware (must be last)
 app.use(errorHandler)

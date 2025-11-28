@@ -3,12 +3,14 @@ import { ButtonHTMLAttributes, ReactNode } from 'react'
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary'
   loading?: boolean
+  loadingText?: string
   children: ReactNode
 }
 
 export function Button({
   variant = 'primary',
   loading = false,
+  loadingText = 'Loading...',
   disabled,
   children,
   className = '',
@@ -32,7 +34,7 @@ export function Button({
       {loading ? (
         <span className="flex items-center gap-2">
           <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-          <span>Loading...</span>
+          <span>{loadingText}</span>
         </span>
       ) : (
         children

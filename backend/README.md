@@ -33,7 +33,10 @@ Edit `.env` with your configuration:
 PORT=3001
 NODE_ENV=development
 REPLICATE_API_TOKEN=your_token_here
+OPENAI_API_KEY=your_openai_api_key_here
 ```
+
+**Note:** `OPENAI_API_KEY` is optional but recommended. If not provided, the system will use hardcoded fallback lists for generating object variations.
 
 ### 3. Run Development Server
 

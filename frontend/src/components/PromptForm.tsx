@@ -95,7 +95,12 @@ export function PromptForm({
             </div>
           )}
 
-          <Button type="submit" loading={loading} className="w-full">
+          <Button
+            type="submit"
+            loading={loading}
+            loadingText="Getting images..."
+            className="w-full"
+          >
             Generate Icons
           </Button>
         </div>

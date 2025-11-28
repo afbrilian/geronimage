@@ -8,35 +8,74 @@ import type {
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
 
+const DEFAULT_TIMEOUT = 30000 // 30 seconds
+
+export function createAbortController(): AbortController {
+  return new AbortController()
+}
+
 async function fetchJSON<T>(
   endpoint: string,
-  options?: RequestInit
+  options?: RequestInit & { timeout?: number }
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
-    ...options,
-  })
+  const { timeout = DEFAULT_TIMEOUT, ...fetchOptions } = options || {}
+  const abortController = fetchOptions.signal || createAbortController()
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({
-      error: `HTTP ${response.status}: ${response.statusText}`,
-    }))
-    throw new Error(error.error || error.message || 'Request failed')
+  // Set up timeout
+  const timeoutId = setTimeout(() => {
+    abortController.abort()
+  }, timeout)
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...fetchOptions,
+      signal: abortController.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...fetchOptions.headers,
+      },
+    })
+
+    clearTimeout(timeoutId)
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        error: `HTTP ${response.status}: ${response.statusText}`,
+      }))
+      
+      // Handle rate limiting
+      if (response.status === 429) {
+        throw new Error('Rate limit exceeded. Please try again later.')
+      }
+      
+      throw new Error(error.error || error.message || 'Request failed')
+    }
+
+    return response.json()
+  } catch (error) {
+    clearTimeout(timeoutId)
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request was cancelled or timed out')
+      }
+      throw error
+    }
+    
+    throw new Error('Network error occurred')
   }
-
-  return response.json()
 }
 
 export async function generateIcons(
-  request: GenerateRequest
+  request: GenerateRequest,
+  signal?: AbortSignal
 ): Promise<GenerateResponse> {
   try {
     return await fetchJSON<GenerateResponse>('/api/generate', {
       method: 'POST',
       body: JSON.stringify(request),
+      signal,
+      timeout: 30000,
     })
   } catch (error) {
     const message =
@@ -45,9 +84,15 @@ export async function generateIcons(
   }
 }
 
-export async function getJobStatus(jobId: string): Promise<JobStatus> {
+export async function getJobStatus(
+  jobId: string,
+  signal?: AbortSignal
+): Promise<JobStatus> {
   try {
-    return await fetchJSON<JobStatus>(`/api/status/${jobId}`)
+    return await fetchJSON<JobStatus>(`/api/status/${jobId}`, {
+      signal,
+      timeout: 10000, // Shorter timeout for status checks
+    })
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Failed to get job status'
@@ -57,11 +102,12 @@ export async function getJobStatus(jobId: string): Promise<JobStatus> {
 
 export async function healthCheck(): Promise<HealthStatus> {
   try {
-    return await fetchJSON<HealthStatus>('/health')
+    return await fetchJSON<HealthStatus>('/health', {
+      timeout: 5000,
+    })
   } catch (error) {
     const message =
       error instanceof Error ? error.message : 'Health check failed'
     throw new Error(message)
   }
 }
-

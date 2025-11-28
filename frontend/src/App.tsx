@@ -1,8 +1,10 @@
+import { useEffect } from 'react'
 import { PromptForm } from './components/PromptForm'
 import { IconGrid } from './components/IconGrid'
 import { LoadingState } from './components/LoadingState'
+import { ToastContainer } from './components/ui/Toast'
 import { useIconStore } from './stores/iconStore'
-import { generateIcons } from './services/api'
+import { useToastStore } from './stores/toastStore'
 
 function App() {
   const {
@@ -10,57 +12,48 @@ function App() {
     selectedStyleId,
     colors,
     images,
-    jobId,
     status,
     error,
     loading,
-    setImages,
-    setJobId,
-    setStatus,
-    setError,
-    setLoading,
+    generateIcons,
+    cancelRequest,
+    retryJob,
   } = useIconStore()
+
+  const { toasts, addToast, removeToast } = useToastStore()
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cancelRequest()
+    }
+  }, [cancelRequest])
+
+  // Show toasts for errors and success
+  useEffect(() => {
+    if (error && status === 'failed') {
+      addToast(error, 'error', retryJob)
+    }
+  }, [error, status, addToast, retryJob])
+
+  useEffect(() => {
+    if (images.length > 0 && status === 'completed') {
+      addToast('Icons generated successfully!', 'success')
+    }
+  }, [images.length, status, addToast])
 
   const handleSubmit = async (data: {
     prompt: string
     styleId: number
     colors: string[]
   }) => {
-    setLoading(true)
-    setError(null)
-    setImages([])
-    setJobId(null)
-    setStatus(null)
-
-    try {
-      const response = await generateIcons(data)
-
-      // If cached, images are returned immediately
-      if (response.images && response.cached) {
-        setImages(response.images)
-        setStatus('completed')
-        setLoading(false)
-        return
-      }
-
-      // Otherwise, we have a jobId (polling will be handled in Phase 4)
-      if (response.jobId) {
-        setJobId(response.jobId)
-        setStatus('pending')
-        // Note: Polling logic will be added in Phase 4
-        setLoading(false)
-      }
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to generate icons'
-      setError(message)
-      setStatus('failed')
-      setLoading(false)
-    }
+    await generateIcons(data)
   }
 
   return (
     <div className="min-h-screen bg-chat-gray-50">
+      <ToastContainer toasts={toasts} onDismiss={removeToast} />
+      
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-chat-gray-900">
@@ -82,6 +75,16 @@ function App() {
               initialStyleId={selectedStyleId}
               initialColors={colors}
             />
+            {error && status === 'failed' && (
+              <div className="mt-4">
+                <button
+                  onClick={retryJob}
+                  className="text-sm text-primary-600 hover:text-primary-700 underline"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
           </aside>
 
           {/* Main Content - Results */}
@@ -101,4 +104,3 @@ function App() {
 }
 
 export default App
-
