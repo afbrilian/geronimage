@@ -1,4 +1,18 @@
 import rateLimit from 'express-rate-limit'
+import type { Request } from 'express'
+
+// Custom keyGenerator that uses Fly-Client-IP header if available (Fly.io specific)
+// Falls back to standard IP detection for other environments
+// This avoids the trust proxy validation warning while still working correctly
+const keyGenerator = (req: Request): string => {
+  // Fly.io sets Fly-Client-IP header which is more reliable and avoids proxy validation
+  const flyClientIp = req.headers['fly-client-ip']
+  if (flyClientIp && typeof flyClientIp === 'string') {
+    return flyClientIp
+  }
+  // Fall back to standard IP detection (works with trust proxy: 1)
+  return req.ip || req.socket?.remoteAddress || 'unknown'
+}
 
 // General API rate limiter
 export const apiLimiter = rateLimit({
@@ -7,6 +21,7 @@ export const apiLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  keyGenerator, // Use custom keyGenerator for Fly.io compatibility
 })
 
 // Stricter limiter for generation endpoint
@@ -17,6 +32,7 @@ export const generationLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: false, // Count successful requests too
+  keyGenerator, // Use custom keyGenerator for Fly.io compatibility
 })
 
 // Lenient limiter for status polling endpoint
@@ -28,4 +44,5 @@ export const statusLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Don't count successful requests
+  keyGenerator, // Use custom keyGenerator for Fly.io compatibility
 })

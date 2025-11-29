@@ -1,0 +1,31 @@
+# Exclude node_modules to force clean install during Fly.io deployment
+# Fly.io buildpacks will detect node_modules and use 'npm rebuild' instead of 'npm install'
+# This causes failures if node_modules are corrupted or contain extraneous packages
+node_modules/
+
+# Build artifacts
+dist/
+build/
+coverage/
+
+# Test files
+*.test.ts
+*.test.js
+tests/
+__tests__/
+*.spec.ts
+*.spec.js
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+

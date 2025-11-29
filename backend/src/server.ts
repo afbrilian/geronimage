@@ -12,6 +12,11 @@ import { queue } from './services/queue.js'
 
 const app = express()
 
+// Trust proxy - required for Fly.io and other proxy environments
+// Trust exactly 1 proxy (Fly.io's reverse proxy)
+// This allows Express to correctly read X-Forwarded-* headers while being secure
+app.set('trust proxy', 1)
+
 // Middleware
 app.use(cors())
 app.use(express.json())

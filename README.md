@@ -112,15 +112,28 @@ fly secrets set OPENAI_API_KEY=your_key  # Optional
 
 2. Navigate to frontend: `cd frontend`
 
-3. Deploy: `vercel`
+3. **First deployment:** Deploy to Vercel:
+   ```bash
+   vercel
+   ```
+   Follow the prompts to link your project.
 
-4. Set environment variable:
-```bash
-vercel env add VITE_API_BASE_URL
-# Enter your backend URL: https://your-backend.fly.dev
-```
+4. **Set environment variable** (replace with your actual backend URL):
+   ```bash
+   vercel env add VITE_API_BASE_URL production
+   # When prompted, enter your backend URL: https://your-backend.fly.dev
+   
+   # Also add for preview and development environments:
+   vercel env add VITE_API_BASE_URL preview
+   vercel env add VITE_API_BASE_URL development
+   ```
 
-5. Redeploy: `vercel --prod`
+5. **Deploy to production:**
+   ```bash
+   vercel --prod
+   ```
+
+**Alternative:** You can also set environment variables via the [Vercel Dashboard](https://vercel.com/dashboard) → Your Project → Settings → Environment Variables
 
 ## Features
 
@@ -163,11 +176,20 @@ npm install
 - Ensure `fly.toml` is in backend directory
 - Check environment variables are set: `fly secrets list`
 - View logs: `fly logs`
+- **Rate limiting errors:** Express must trust proxy headers (`app.set('trust proxy', true)`) - this is already configured
 
 **Vercel deployment:**
 - Ensure `vercel.json` is in frontend directory
 - Check environment variables in Vercel dashboard
 - Verify build command: `npm run build`
+
+**Error: "Environment Variable references Secret which does not exist":**
+- This happens when `vercel.json` references a secret that hasn't been created
+- Solution: Remove the `env` section from `vercel.json` and set environment variables directly via CLI or dashboard:
+  ```bash
+  vercel env add VITE_API_BASE_URL production
+  ```
+- Environment variables set via CLI/dashboard will automatically be available during build
 
 ## API Endpoints
 

@@ -18,25 +18,28 @@ async function fetchJSON<T>(
   endpoint: string,
   options?: RequestInit & { timeout?: number }
 ): Promise<T> {
-  const { timeout = DEFAULT_TIMEOUT, ...fetchOptions } = options || {}
-  const abortController = fetchOptions.signal || createAbortController()
+  const { timeout = DEFAULT_TIMEOUT, signal: providedSignal, ...fetchOptions } = options || {}
+  const abortController = providedSignal ? null : createAbortController()
+  const signal = providedSignal || (abortController?.signal as AbortSignal)
 
-  // Set up timeout
-  const timeoutId = setTimeout(() => {
+  // Set up timeout only if we created our own abort controller
+  const timeoutId = abortController ? setTimeout(() => {
     abortController.abort()
-  }, timeout)
+  }, timeout) : null
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...fetchOptions,
-      signal: abortController.signal,
+      signal,
       headers: {
         'Content-Type': 'application/json',
         ...fetchOptions.headers,
       },
     })
 
-    clearTimeout(timeoutId)
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({
@@ -53,7 +56,9 @@ async function fetchJSON<T>(
 
     return response.json()
   } catch (error) {
-    clearTimeout(timeoutId)
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
     
     if (error instanceof Error) {
       if (error.name === 'AbortError') {

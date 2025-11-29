@@ -205,6 +205,56 @@ Health check endpoint.
 
 ## Production Deployment
 
+### Fly.io Deployment
+
+1. **Before deploying, remove `node_modules` to avoid buildpack issues:**
+   ```bash
+   rm -rf node_modules
+   ```
+   
+   **Why?** Fly.io's Paketo buildpack detects `node_modules` and uses `npm rebuild` instead of a clean `npm install`. If your `node_modules` contain extraneous or corrupted packages, the rebuild will fail. Removing them forces a clean install.
+
+2. Build the application:
+   ```bash
+   npm run build
+   ```
+
+3. Deploy to Fly.io:
+   ```bash
+   fly deploy
+   ```
+
+4. Set environment variables (if not already set):
+   ```bash
+   fly secrets set REPLICATE_API_TOKEN=your_token
+   fly secrets set OPENAI_API_KEY=your_key  # Optional
+   ```
+
+### Troubleshooting Fly.io Deployment
+
+**Issue: Build fails with "npm ERR! extraneous" or "npm ERR! missing" errors**
+
+This happens when the buildpack detects `node_modules` and tries to rebuild them. Solutions:
+
+1. **Remove node_modules before deploying:**
+   ```bash
+   cd backend
+   rm -rf node_modules
+   fly deploy
+   ```
+
+2. **Clean and reinstall dependencies locally (if you need them):**
+   ```bash
+   rm -rf node_modules package-lock.json
+   npm install
+   ```
+
+3. **Verify your `.dockerignore` excludes `node_modules`:**
+   - Ensure `node_modules` is listed in `.dockerignore`
+   - The `.flyignore` file also helps exclude files from deployment
+
+### General Production Deployment
+
 1. Build the application:
 ```bash
 npm run build
@@ -229,6 +279,28 @@ All errors return a consistent format:
   "timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```
+
+## Troubleshooting
+
+### Rate Limiting Errors
+
+**Error: "X-Forwarded-For header is set but Express 'trust proxy' setting is false"**
+
+This occurs when deploying behind a proxy (like Fly.io). The fix is already applied:
+- Express `trust proxy` is enabled to correctly read proxy headers
+- This allows rate limiting to identify clients correctly through the proxy
+
+If you see this error after deployment, ensure your code has:
+```typescript
+app.set('trust proxy', true)
+```
+
+### Health Check Failures
+
+If health checks fail intermittently:
+- Check that the `/health` endpoint is responding correctly
+- Verify the health check path in `fly.toml` matches your endpoint
+- Ensure the server starts within the grace period (default: 10s)
 
 ## License
 

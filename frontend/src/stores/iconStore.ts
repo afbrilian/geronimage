@@ -17,7 +17,7 @@ interface IconStore {
   loading: boolean
 
   // Polling state
-  pollingInterval: NodeJS.Timeout | null
+  pollingInterval: number | null
   pollingActive: boolean
   retryCount: number
   maxRetries: number
@@ -140,7 +140,6 @@ export const useIconStore = create<IconStore>((set, get) => ({
       clearInterval(state.pollingInterval)
     }
 
-    let pollCount = 0
     const maxPollDuration = 5 * 60 * 1000 // 5 minutes
     const startTime = Date.now()
 
@@ -219,7 +218,7 @@ export const useIconStore = create<IconStore>((set, get) => ({
             set({ pollingInterval: normalInterval })
           }, backoffInterval)
           
-          set({ pollingInterval: backoffTimeout as unknown as NodeJS.Timeout })
+          set({ pollingInterval: backoffTimeout as unknown as number })
         }
       }
     }
