@@ -10,12 +10,12 @@ A production-grade web application that generates 4 consistent style icons from 
 - In-memory Queue & Cache
 - Express Rate Limit
 
-### Frontend (Coming Soon)
+### Frontend
 - React + TypeScript + Vite
 - Tailwind CSS
 - Zustand (State Management)
 
-### Deployment (Coming Soon)
+### Deployment
 - Backend: Fly.io
 - Frontend: Vercel
 
@@ -299,10 +299,13 @@ Health check endpoint with queue statistics.
 ## Rate Limiting
 
 - **General API**: 100 requests per 15 minutes per IP
-- **Generation Endpoint**: 20 requests per hour per IP
-- **Status Endpoint**: 60 requests per minute per IP (for polling)
+- **Generation Endpoint**: 60 requests per hour per IP
+- **Status Endpoint**: 60 requests per minute per IP (for polling; skips successful requests)
 
-Rate limit responses include `Retry-After` header indicating when to retry.
+Rate limiting uses:
+- `Fly-Client-IP` header on Fly.io for accurate IP detection
+- Falls back to standard IP detection in other environments
+- Rate limit responses include `RateLimit-*` headers indicating remaining requests and reset time
 
 ## Style Presets
 
@@ -326,15 +329,6 @@ Rate limit responses include `Retry-After` header indicating when to retry.
 - ✅ **Real-time Updates**: Polling-based job status updates
 - ✅ **Download Options**: Individual or ZIP download of all icons
 - ✅ **Modern UI**: ChatGPT + Airbnb-inspired design
-
-## Documentation
-
-- [Backend README](backend/README.md) - Backend API documentation
-- [Frontend README](frontend/README.md) - Frontend setup and usage
-
-## Development
-
-See detailed build plan in [build-progress.md](build-progress.md)
 
 ## License
 
