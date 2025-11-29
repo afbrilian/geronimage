@@ -1,8 +1,5 @@
-import { generateImage } from './replicate.js'
-import { buildPrompt } from './promptService.js'
 import { cache } from './cache.js'
-import { generateObjectVariations } from './openaiService.js'
-import { getHardcodedVariations } from './objectVariations.js'
+import { generateIconSet } from './iconGenerationService.js'
 
 export interface Job {
   id: string
@@ -56,133 +53,20 @@ class SimpleQueue {
     return this.queue.some(j => j.status === 'pending')
   }
 
-  private async getObjectVariations(prompt: string): Promise<string[]> {
-    // Try OpenAI first
-    const openaiVariations = await generateObjectVariations(prompt)
-    if (openaiVariations && openaiVariations.length === 4) {
-      return openaiVariations
-    }
-
-    // Fallback to hardcoded list
-    const hardcodedVariations = getHardcodedVariations(prompt)
-    if (hardcodedVariations && hardcodedVariations.length === 4) {
-      return hardcodedVariations
-    }
-
-    // Last resort: use the original prompt 4 times
-    // This will generate 4 variations of the same object
-    return [prompt, prompt, prompt, prompt]
-  }
-
   private async executeJob(job: Job) {
     job.status = 'processing'
     try {
       const { prompt, styleId, colors } = job.data
 
-      // Get 4 different object variations
-      const objectVariations = await this.getObjectVariations(prompt)
+      // Delegate icon generation to dedicated service
+      const images = await generateIconSet({ prompt, styleId, colors })
 
-      // Generate 4 images, each with a different object prompt
-      // Process sequentially to respect Replicate rate limits (6 req/min, burst of 1)
-      const images: string[] = []
-      const errors: string[] = []
-
-      for (let i = 0; i < 4; i++) {
-        const objectPrompt = objectVariations[i]
-        const fullPrompt = buildPrompt(objectPrompt, styleId, colors)
-
-        let retries = 0
-        const maxRetries = 3
-        let imageUrl: string | null = null
-
-        while (retries <= maxRetries && !imageUrl) {
-          try {
-            const result = await generateImage({
-              prompt: fullPrompt,
-              aspect_ratio: '1:1',
-              num_outputs: 1, // Generate 1 image per call
-              output_format: 'png',
-            })
-
-            if (result.length > 0) {
-              imageUrl = result[0]
-              images[i] = imageUrl
-              break
-            }
-          } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : 'Unknown error'
-
-            // Check if it's a rate limit error (429)
-            if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
-              // Try to extract retry_after from error message
-              const retryAfterMatch = errorMessage.match(/retry_after["\s:]+(\d+)/i)
-              const retryAfter = retryAfterMatch
-                ? parseInt(retryAfterMatch[1], 10) * 1000
-                : (retries + 1) * 2000 // Default: exponential backoff
-
-              if (retries < maxRetries) {
-                console.log(
-                  `Rate limited for image ${i + 1} ("${objectPrompt}"). Retrying in ${retryAfter}ms...`
-                )
-                await new Promise(resolve => setTimeout(resolve, retryAfter))
-                retries++
-                continue
-              }
-            }
-
-            // If not a rate limit error or max retries reached, log and break
-            console.error(
-              `Error generating image ${i + 1} for "${objectPrompt}":`,
-              error
-            )
-            break
-          }
-        }
-
-        if (!imageUrl) {
-          errors.push(
-            `Failed to generate image ${i + 1} for "${objectPrompt}" after ${maxRetries} retries`
-          )
-        }
-
-        // Add a small delay between requests to respect rate limits
-        // Replicate allows 6 requests per minute, so ~10 seconds between requests is safe
-        if (i < 3) {
-          // Don't delay after the last image
-          await new Promise(resolve => setTimeout(resolve, 10000)) // 10 seconds
-        }
-      }
-
-      // Filter out undefined entries and ensure we have exactly 4 images
-      const finalImages = images.filter(
-        (img): img is string => img !== undefined && img !== null
-      )
-
-      // If we have at least some images, try to continue
-      // But if we have less than 4, we need to retry or fail
-      if (finalImages.length === 0) {
-        throw new Error(
-          `Failed to generate any images. Errors: ${errors.join('; ')}`
-        )
-      }
-
-      if (finalImages.length < 4) {
-        // If we got some images but not all, we can either:
-        // 1. Retry the failed ones (complex)
-        // 2. Fail the job (current approach)
-        // For now, we'll fail if we don't have exactly 4
-        throw new Error(
-          `Only generated ${finalImages.length} out of 4 images. Errors: ${errors.join('; ')}`
-        )
-      }
-
-      job.result = finalImages
+      job.result = images
       job.status = 'completed'
       job.completedAt = new Date()
 
       // Cache the result immediately upon completion
-      cache.set(job.data.prompt, job.data.styleId, images, job.data.colors)
+      cache.set(prompt, styleId, images, colors)
     } catch (error) {
       job.status = 'failed'
       job.error = error instanceof Error ? error.message : 'Unknown error'

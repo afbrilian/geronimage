@@ -12,7 +12,7 @@ export const apiLimiter = rateLimit({
 // Stricter limiter for generation endpoint
 export const generationLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 20, // Limit each IP to 20 generation requests per hour
+  max: 50, // Limit each IP to 20 generation requests per hour
   message: 'Too many icon generation requests. Please try again in an hour.',
   standardHeaders: true,
   legacyHeaders: false,

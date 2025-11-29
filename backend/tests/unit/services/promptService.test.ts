@@ -35,7 +35,6 @@ describe('Prompt Service', () => {
       const result = buildPrompt('rocket', 1)
       expect(result).toContain('rocket')
       expect(result).toContain('pastel')
-      expect(result).toContain('Single icon')
     })
 
     it('should build prompt with colors', () => {
@@ -58,9 +57,9 @@ describe('Prompt Service', () => {
 
     it('should add IMPORTANT instruction', () => {
       const result = buildPrompt('rocket', 1)
-      expect(result).toContain('IMPORTANT')
-      expect(result).toContain('Single icon')
-      expect(result).toContain('centered composition')
+      expect(result).toContain('Only one object in the image')
+      expect(result).toContain('No text, no words, no letters, no labels, no logos')
+      expect(result).toContain('Icon-style composition with a single centered subject')
     })
 
     it('should handle empty colors array', () => {
