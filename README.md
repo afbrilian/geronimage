@@ -31,6 +31,8 @@ A production-grade web application that generates 4 consistent style icons from 
 
 ## Quick Start
 
+To run the project locally you need to start **both** the backend and the frontend.
+
 ### Prerequisites
 - Node.js 18+ and npm
 - Replicate API token ([Get one here](https://replicate.com/account/api-tokens))
@@ -47,9 +49,11 @@ cp .env.example .env
 ```bash
 REPLICATE_API_TOKEN=your_token_here
 OPENAI_API_KEY=your_key_here  # Optional
+# Optional override for frontend API base URL (defaults to http://localhost:3001)
+# VITE_API_BASE_URL=http://localhost:3001
 ```
 
-### Backend Setup
+### 1. Backend Setup
 
 ```bash
 cd backend
@@ -59,7 +63,7 @@ npm run dev
 
 Server will start on http://localhost:3001
 
-### Frontend Setup
+### 2. Frontend Setup
 
 ```bash
 cd frontend
@@ -68,6 +72,14 @@ npm run dev
 ```
 
 Frontend will start on http://localhost:5173
+
+### 3. Use the App
+
+1. Open `http://localhost:5173` in your browser.
+2. Enter a prompt (e.g., `Toys`), select a style, optionally add HEX colors.
+3. Click **Generate Icons**.
+4. Wait for the loading state to finish; a 2×2 grid of icons will appear.
+5. Download individual icons or all as a ZIP.
 
 ### Test the API
 

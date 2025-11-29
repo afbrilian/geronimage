@@ -1,15 +1,18 @@
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+const openai =
+  process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim().length > 0
+    ? new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      })
+    : null
 
 const TIMEOUT_MS = 10000 // 10 seconds
 
 export async function generateObjectVariations(
   category: string
 ): Promise<string[] | null> {
-  if (!process.env.OPENAI_API_KEY) {
+  if (!openai) {
     console.warn('OPENAI_API_KEY not set, skipping OpenAI call')
     return null
   }
