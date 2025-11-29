@@ -2,16 +2,6 @@
 
 A production-grade web application that generates 4 consistent style icons from a single prompt using Replicate's flux-schnell AI model.
 
-## Project Status
-
-### ✅ Phase 1: Backend Foundation - COMPLETED
-### ✅ Phase 2: Backend Testing - COMPLETED
-### ✅ Phase 3: Frontend Foundation - COMPLETED
-### ✅ Phase 4: Frontend Integration & Polling - COMPLETED
-### ✅ Phase 5: Polish & Deployment - COMPLETED
-
-**Status**: Production-ready! All phases complete.
-
 ## Tech Stack
 
 ### Backend
@@ -317,8 +307,6 @@ Rate limit responses include `Retry-After` header indicating when to retry.
 
 ## Documentation
 
-- [Build Progress](build-progress.md) - Overall build plan and progress
-- [Evaluation Report](EVALUATION.md) - Requirements evaluation and status
 - [Backend README](backend/README.md) - Backend API documentation
 - [Frontend README](frontend/README.md) - Frontend setup and usage
 
